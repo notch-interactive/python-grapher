@@ -11,6 +11,7 @@ class Generator(object):
     """
     def __init__(self, font_size=9, color_background="white", color_properties="", color_class=""):
         self.known_classes = []
+        self.known_modules = []
         self.font_size = font_size
         self.color_background = color_background
         self.color_properties = color_properties
@@ -82,11 +83,73 @@ digraph name {
         return name
 
 
+    def write_module(self, module, with_properties):
+        """
+        Return DOT code for given module
+        Include function with_properties is True
+        """
+        if inspect.isclass(module):
+            return self.write_class(module, with_properties)
+
+        if not inspect.ismodule(module):
+            return ""
+
+        modulename = module.__name__
+        content = ""
+
+        # Module already drawn?
+        if modulename in self.known_modules:
+            return content
+
+        # Draw class
+        self.known_modules.append(modulename)
+        content += self.write_node_start(modulename)
+
+        # Parse source file
+        module_file = module.__file__.replace(".pyc", ".py")
+
+        ast = compiler.parseFile(module_file)
+        log = SourceWalker()
+        compiler.walk(ast, log)
+
+        if with_properties:
+            for prop in log.functions:
+                content += self.write_property(prop)
+
+        content += self.write_node_end()
+
+        # Imports
+        mod_path = modulename.split(".")
+
+        for mod in log.imports:
+            # display only imports from same base package
+            if mod.startswith(mod_path[0]) and mod not in self.known_modules:
+                tmp = mod.split(".")
+                imp_class_name = tmp.pop(-1)
+                imp_package_name = ".".join(tmp)
+
+                if imp_package_name:
+                    __import__(imp_package_name)
+                    imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
+                else:
+                    __import__(imp_class_name)
+                    imp_module = sys.modules[imp_class_name]
+
+                content += self.write_class(imp_module, with_properties)
+                content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
+
+        return content
+
+
+
     def write_class(self, cls, with_properties):
         """
         Return DOT code for given class
         Include class properties if with_properties is True
         """
+        if inspect.ismodule(cls):
+            return self.write_module(cls, with_properties)
+
         if not inspect.isclass(cls):
             return ""
 

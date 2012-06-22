@@ -14,7 +14,14 @@ class SourceWalker:
         stmt = statement.asList()
 
         if not stmt[1].startswith("__"):
-            self.functions.append(str(stmt[1]) + "(" + ",".join(stmt[2]) + ")")
+            func_str = str(stmt[1]) + "("
+
+            for arg in stmt[2]:
+                func_str += str(arg)
+
+            func_str += ")"
+            self.functions.append(func_str)
+
 
     def visitFrom(self, statement):
         """

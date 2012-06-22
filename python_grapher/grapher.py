@@ -12,12 +12,26 @@ class Grapher(object):
         self.template = ""
 
 
+    def draw_modules(self, module_list, with_properties=False):
+        """
+        Generate diagram of a given list of Python modules
+        Include module functions if with_properties is True
+        """
+        self.template = self.generator.write_graph_start()
+
+        for module in module_list:
+            __import__(module)
+            self.template += self.generator.write_module(sys.modules[module], with_properties=with_properties)
+
+        self.template += self.generator.write_graph_end()
+
+
     def draw_classes(self, class_list, with_properties=False):
         """
         Generate diagramm of a given list of classes
         Include class properties if with_properties is True
         """
-        self.template = self.generator.write_head()
+        self.template = self.generator.write_graph_start()
 
         for cls in class_list:
             cls_path = cls.split(".")
@@ -25,12 +39,12 @@ class Grapher(object):
 
             if cls_path:
                 __import__(".".join(cls_path))
-                self.template += self.generator.draw_class(getattr(sys.modules[".".join(cls_path)], cls_name), with_properties=with_properties)
+                self.template += self.generator.write_class(getattr(sys.modules[".".join(cls_path)], cls_name), with_properties=with_properties)
             else:
                 __import__(cls_name)
-                self.template += self.generator.draw_class(cls_name, with_properties=with_properties)
+                self.template += self.generator.write_class(cls_name, with_properties=with_properties)
 
-        self.template += self.generator.write_tail()
+        self.template += self.generator.write_graph_end()
 
 
     def write_to_file(self, output_file="graph.png", layout_manager="fdp"):

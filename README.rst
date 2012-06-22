@@ -1,7 +1,7 @@
 Python-Grapher
 ==============
 
-Generate diagrams from your Python classes.
+Generate diagrams from your Python classes and modules.
 
 
 Requirements
