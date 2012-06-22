@@ -21,4 +21,5 @@ class build_py(_build_py):
           url="http://github.com/notch-interactive/python-grapher",
           description="Draw diagrams from your Python classes",
           packages=["python_grapher"],
+          requires= ["pygraphviz"],
     )

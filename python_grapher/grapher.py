@@ -4,12 +4,19 @@ import pygraphviz as pgv
 from python_grapher.dot import Generator
 
 class Grapher(object):
+    """
+    Generate a graph of Python classes
+    """
     def __init__(self, font_size=9, color_background="white", color_properties="", color_class=""):
         self.generator = Generator(font_size, color_background, color_properties, color_class)
         self.template = ""
 
 
     def draw_classes(self, class_list, with_properties=False):
+        """
+        Generate diagramm of a given list of classes
+        Include class properties if with_properties is True
+        """
         self.template = self.generator.write_head()
 
         for cls in class_list:
@@ -27,6 +34,10 @@ class Grapher(object):
 
 
     def write_to_file(self, output_file="graph.png", layout_manager="fdp"):
+        """
+        Write diagram to file
+        Optionally you can specify the filename and the Graphviz layout manager to used
+        """
         tmpfile = tempfile.NamedTemporaryFile()
 
         tmpfile.write(self.template)
