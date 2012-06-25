@@ -19,7 +19,8 @@ class build_py(_build_py):
           author="Notch Interactive GmbH",
           author_email="info@notch-interactive.com",
           url="http://github.com/notch-interactive/python-grapher",
-          description="Draw diagrams from your Python classes",
+          description="Draw diagrams from your Python classes and modules",
           packages=["python_grapher"],
           requires= ["pygraphviz"],
+          scripts=["python2uml.py"],
     )
