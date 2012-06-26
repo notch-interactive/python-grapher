@@ -126,28 +126,34 @@ digraph name {
             mod_path = modulename.split(".")
 
             for mod in log.imports:
-                # display only imports from same base package
-                if mod.startswith(mod_path[0]) and mod not in self.known_modules:
-                    tmp = mod.split(".")
-                    imp_class_name = tmp.pop(-1)
-                    imp_package_name = ".".join(tmp)
+                tmp = mod.split(".")
+                imp_class_name = tmp.pop(-1)
+                imp_package_name = ".".join(tmp)
 
-                    try:
-                        if imp_package_name:
-                            __import__(imp_package_name)
+                try:
+                    if imp_package_name:
+                        __import__(imp_package_name)
+
+                        if imp_class_name != "*":
                             imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
 
                             if inspect.isfunction(imp_module):
                                 imp_module = sys.modules[imp_package_name]
                                 mod = imp_module.__name__
                         else:
-                            __import__(imp_class_name)
-                            imp_module = sys.modules[imp_class_name]
+                            imp_module = sys.modules[imp_package_name]
+                            mod = imp_module.__name__
 
+                    else:
+                        __import__(imp_class_name)
+                        imp_module = sys.modules[imp_class_name]
+
+                    # display only imports from same base package
+                    if mod.startswith(mod_path[0]) and mod not in self.known_modules and mod not in self.known_classes:
                         content += self.write_class(imp_module, with_properties)
                         content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
-                    except ImportError:
-                        pass
+                except ImportError:
+                    pass
         else:
             content += self.write_node_end()
 
@@ -210,27 +216,32 @@ digraph name {
             mod_path = cls.__module__.split(".")
 
             for mod in log.imports:
-                # display only imports from same base package
-                if mod not in self.known_classes:
-                    tmp = mod.split(".")
-                    imp_class_name = tmp.pop(-1)
-                    imp_package_name = ".".join(tmp)
+                tmp = mod.split(".")
+                imp_class_name = tmp.pop(-1)
+                imp_package_name = ".".join(tmp)
 
-                    try:
-                        if imp_package_name:
-                            __import__(imp_package_name)
+                try:
+                    if imp_package_name:
+                        __import__(imp_package_name)
+
+                        if imp_class_name != "*":
                             imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
 
                             if inspect.isfunction(imp_module):
                                 imp_module = sys.modules[imp_package_name]
                                 mod = imp_module.__name__
                         else:
-                            __import__(mod)
-                            imp_module = sys.modules[mod]
+                            imp_module = sys.modules[imp_package_name]
+                            mod = imp_module.__name__
+                    else:
+                        __import__(mod)
+                        imp_module = sys.modules[mod]
 
+                    # display only imports from same base package
+                    if mod not in self.known_classes and mod not in self.known_modules:
                         content += self.write_class(imp_module, with_properties)
                         content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
-                    except ImportError:
+                except ImportError:
                         pass
         else:
             content += self.write_node_end()

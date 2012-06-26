@@ -31,16 +31,8 @@ class SourceWalker(ast.NodeVisitor):
         """
         Collect from imports
         """
-        imp = statement.names[0].name
-
-        if imp == '__future__':
-            # we don't care what's imported from the future
-            return
-
-        if statement.module:
-            self.imports.append(statement.module + "." + imp)
-        else:
-            self.imports.append(imp)
+        for imp in statement.names:
+            self.imports.append(statement.module + "." + imp.name)
 
 
     def visit_Import(self, statement):
