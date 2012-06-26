@@ -136,6 +136,10 @@ digraph name {
                         if imp_package_name:
                             __import__(imp_package_name)
                             imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
+
+                            if inspect.isfunction(imp_module):
+                                imp_module = sys.modules[imp_package_name]
+                                mod = imp_module.__name__
                         else:
                             __import__(imp_class_name)
                             imp_module = sys.modules[imp_class_name]
@@ -216,6 +220,10 @@ digraph name {
                         if imp_package_name:
                             __import__(imp_package_name)
                             imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
+
+                            if inspect.isfunction(imp_module):
+                                imp_module = sys.modules[imp_package_name]
+                                mod = imp_module.__name__
                         else:
                             __import__(mod)
                             imp_module = sys.modules[mod]
