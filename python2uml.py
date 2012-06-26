@@ -27,6 +27,8 @@ parser.add_argument("classes")
 args = parser.parse_args()
 
 graph = Grapher(args.font_size, args.color_background, args.color_properties, args.color_class)
+import pudb; pudb.set_trace()
+
 graph.draw_classes(args.classes.split(","), args.with_properties)
-graph.write_to_file(args.output_file, args.layout_manager)
+graph.write_to_file(args.output_file, args.layout_manager, args.debug)
 print "Generated " + args.output_file

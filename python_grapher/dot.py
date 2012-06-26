@@ -1,6 +1,6 @@
 import sys
 import inspect
-import compiler
+import ast
 from python_grapher.parser import SourceWalker
 
 
@@ -106,37 +106,46 @@ digraph name {
         content += self.write_node_start(modulename)
 
         # Parse source file
-        module_file = module.__file__.replace(".pyc", ".py")
+        if hasattr(module, "__file__"):
+            module_file = module.__file__.replace(".pyc", ".py")
+        else:
+            module_file = ""
 
-        ast = compiler.parseFile(module_file)
-        log = SourceWalker()
-        compiler.walk(ast, log)
+        if module_file.endswith(".py"):
+            nodes = ast.parse(open(module_file).read())
+            log = SourceWalker()
+            log.visit(nodes)
 
-        if with_properties:
-            for prop in log.functions:
-                content += self.write_property(prop)
+            if with_properties:
+                for prop in log.functions:
+                    content += self.write_property(prop)
 
-        content += self.write_node_end()
+            content += self.write_node_end()
 
-        # Imports
-        mod_path = modulename.split(".")
+            # Imports
+            mod_path = modulename.split(".")
 
-        for mod in log.imports:
-            # display only imports from same base package
-            if mod.startswith(mod_path[0]) and mod not in self.known_modules:
-                tmp = mod.split(".")
-                imp_class_name = tmp.pop(-1)
-                imp_package_name = ".".join(tmp)
+            for mod in log.imports:
+                # display only imports from same base package
+                if mod.startswith(mod_path[0]) and mod not in self.known_modules:
+                    tmp = mod.split(".")
+                    imp_class_name = tmp.pop(-1)
+                    imp_package_name = ".".join(tmp)
 
-                if imp_package_name:
-                    __import__(imp_package_name)
-                    imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
-                else:
-                    __import__(imp_class_name)
-                    imp_module = sys.modules[imp_class_name]
+                    try:
+                        if imp_package_name:
+                            __import__(imp_package_name)
+                            imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
+                        else:
+                            __import__(imp_class_name)
+                            imp_module = sys.modules[imp_class_name]
 
-                content += self.write_class(imp_module, with_properties)
-                content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
+                        content += self.write_class(imp_module, with_properties)
+                        content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
+                    except ImportError:
+                        pass
+        else:
+            content += self.write_node_end()
 
         return content
 
@@ -174,36 +183,48 @@ digraph name {
 
         # Parse source file
         module_file = sys.modules[cls.__module__].__file__.replace(".pyc", ".py")
-        ast = compiler.parseFile(module_file)
-        log = SourceWalker()
-        compiler.walk(ast, log)
 
-        if with_properties:
-            for prop in log.functions:
-                content += self.write_property(prop)
+        if module_file.endswith(".py"):
+            nodes = ast.parse(open(module_file).read())
+            log = SourceWalker()
+            log.visit(nodes)
 
-        content += self.write_node_end()
+            if with_properties:
+                for prop in log.functions:
+                    content += self.write_property(prop)
 
-
-        # Draw edges between parent and child classes
-        for base_class in cls.__bases__:
-            if base_class != object:
-                content += "\"%s\" -> \"%s\" [style=dotted arrowhead=normal arrowtail=normal];\n" % (classname, self.get_full_classname(base_class))
+            content += self.write_node_end()
 
 
-        # Imports
-        mod_path = cls.__module__.split(".")
+            # Draw edges between parent and child classes
+            for base_class in cls.__bases__:
+                if base_class != object:
+                    content += "\"%s\" -> \"%s\" [style=dotted arrowhead=normal arrowtail=normal];\n" % (classname, self.get_full_classname(base_class))
 
-        for mod in log.imports:
-            # display only imports from same base package
-            if mod.startswith(mod_path[0]) and mod not in self.known_classes:
-                tmp = mod.split(".")
-                imp_class_name = tmp.pop(-1)
-                imp_package_name = ".".join(tmp)
-                __import__(imp_package_name)
-                imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
 
-                content += self.write_class(imp_module, with_properties)
-                content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
+            # Imports
+            mod_path = cls.__module__.split(".")
+
+            for mod in log.imports:
+                # display only imports from same base package
+                if mod not in self.known_classes:
+                    tmp = mod.split(".")
+                    imp_class_name = tmp.pop(-1)
+                    imp_package_name = ".".join(tmp)
+
+                    try:
+                        if imp_package_name:
+                            __import__(imp_package_name)
+                            imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
+                        else:
+                            __import__(mod)
+                            imp_module = sys.modules[mod]
+
+                        content += self.write_class(imp_module, with_properties)
+                        content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
+                    except ImportError:
+                        pass
+        else:
+            content += self.write_node_end()
 
         return content

@@ -1,4 +1,6 @@
-class SourceWalker:
+import ast
+
+class SourceWalker(ast.NodeVisitor):
     """
     Source code walker used to stumbler over interesting statements with compiler.walk()
     Some of the code is borrow from Zope
@@ -7,41 +9,43 @@ class SourceWalker:
         self.imports = []
         self.functions = []
 
-    def visitFunction(self, statement):
+    def visit_FunctionDef(self, statement):
         """
         Collect function definitions
         """
-        stmt = statement.asList()
+        # if stmt[1] == "__init__":
+        #     import pudb; pudb.set_trace()
 
-        if not stmt[1].startswith("__"):
-            func_str = str(stmt[1]) + "("
+        if not statement.name.startswith("__"):
+            func_str = str(statement.name) + "("
 
-            for arg in stmt[2]:
-                func_str += str(arg)
+            for arg in statement.args.args:
+                func_str += str(arg.id) + ", "
 
+            func_str = func_str[:-2]
             func_str += ")"
             self.functions.append(func_str)
 
 
-    def visitFrom(self, statement):
+    def visit_ImportFrom(self, statement):
         """
         Collect from imports
         """
-        stmt = statement.asList()
-        if stmt[0] == '__future__':
+        imp = statement.names[0].name
+
+        if imp == '__future__':
             # we don't care what's imported from the future
             return
 
-        for orig_name, as_name in stmt[1]:
-            # we don't care about from import *
-            if orig_name == '*':
-                continue
+        if statement.module:
+            self.imports.append(statement.module + "." + imp)
+        else:
+            self.imports.append(imp)
 
-            self.imports.append(stmt[0] + "." + orig_name)
 
-    def visitImport(self, statement):
+    def visit_Import(self, statement):
         """
         Collect imports
         """
-        for orig_name, as_name in statement.names:
-            self.imports.append(orig_name)
+        for node in statement.names:
+            self.imports.append(node.name)

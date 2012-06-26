@@ -47,12 +47,16 @@ class Grapher(object):
         self.template += self.generator.write_graph_end()
 
 
-    def write_to_file(self, output_file="graph.png", layout_manager="fdp"):
+    def write_to_file(self, output_file="graph.png", layout_manager="fdp", debug=False):
         """
         Write diagram to file
         Optionally you can specify the filename and the Graphviz layout manager to used
         """
-        tmpfile = tempfile.NamedTemporaryFile()
+        if debug:
+            tmpfile = tempfile.NamedTemporaryFile(delete=False)
+            print "Generating DOT file " + tmpfile.name
+        else:
+            tmpfile = tempfile.NamedTemporaryFile(delete=False)
 
         tmpfile.write(self.template)
         tmpfile.seek(0)
