@@ -16,11 +16,14 @@ class SourceWalker(ast.NodeVisitor):
         # if stmt[1] == "__init__":
         #     import pudb; pudb.set_trace()
 
-        if not statement.name.startswith("__"):
+        if not statement.name.startswith("_"):
             func_str = str(statement.name) + "("
 
             for arg in statement.args.args:
-                func_str += str(arg.id) + ", "
+                try:
+                    func_str += str(arg.id) + ", "
+                except AttributeError:
+                    pass
 
             func_str = func_str[:-2]
             func_str += ")"

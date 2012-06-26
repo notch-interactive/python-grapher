@@ -83,13 +83,13 @@ digraph name {
         return name
 
 
-    def write_module(self, module, with_properties):
+    def write_module(self, module, **kwargs):
         """
         Return DOT code for given module
         Include function with_properties is True
         """
         if inspect.isclass(module):
-            return self.write_class(module, with_properties)
+            return self.write_class(module, **kwargs)
 
         if not inspect.ismodule(module):
             return ""
@@ -116,7 +116,7 @@ digraph name {
             log = SourceWalker()
             log.visit(nodes)
 
-            if with_properties:
+            if kwargs.get("with_properties", False):
                 for prop in log.functions:
                     content += self.write_property(prop)
 
@@ -126,12 +126,16 @@ digraph name {
             mod_path = modulename.split(".")
 
             for mod in log.imports:
+                if not mod or mod in self.known_modules or mod in self.known_classes:
+                    continue
+
                 tmp = mod.split(".")
                 imp_class_name = tmp.pop(-1)
                 imp_package_name = ".".join(tmp)
 
                 try:
                     if imp_package_name:
+                        base_package = tmp[0]
                         __import__(imp_package_name)
 
                         if imp_class_name != "*":
@@ -145,12 +149,13 @@ digraph name {
                             mod = imp_module.__name__
 
                     else:
+                        base_package = imp_class_name
                         __import__(imp_class_name)
                         imp_module = sys.modules[imp_class_name]
 
                     # display only imports from same base package
-                    if mod.startswith(mod_path[0]) and mod not in self.known_modules and mod not in self.known_classes:
-                        content += self.write_class(imp_module, with_properties)
+                    if not kwargs.get("package_boundaries", False) or base_package in modulename:
+                        content += self.write_class(imp_module, **kwargs)
                         content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
                 except ImportError:
                     pass
@@ -161,13 +166,13 @@ digraph name {
 
 
 
-    def write_class(self, cls, with_properties):
+    def write_class(self, cls, **kwargs):
         """
         Return DOT code for given class
         Include class properties if with_properties is True
         """
         if inspect.ismodule(cls):
-            return self.write_module(cls, with_properties)
+            return self.write_module(cls, **kwargs)
 
         if not inspect.isclass(cls):
             return ""
@@ -184,7 +189,7 @@ digraph name {
             cls_path = classname.split(".")
 
             if cls_path[0] in self.get_full_classname(base_class) and base_class != object:
-                content += self.write_class(base_class, with_properties)
+                content += self.write_class(base_class, **kwargs)
 
 
         # Draw class
@@ -192,14 +197,17 @@ digraph name {
         content += self.write_node_start(classname)
 
         # Parse source file
-        module_file = sys.modules[cls.__module__].__file__.replace(".pyc", ".py")
+        if hasattr(sys.modules[cls.__module__], "__file__"):
+            module_file = sys.modules[cls.__module__].__file__.replace(".pyc", ".py")
+        else:
+            module_file = ""
 
         if module_file.endswith(".py"):
             nodes = ast.parse(open(module_file).read())
             log = SourceWalker()
             log.visit(nodes)
 
-            if with_properties:
+            if kwargs.get("with_properties", False):
                 for prop in log.functions:
                     content += self.write_property(prop)
 
@@ -216,12 +224,16 @@ digraph name {
             mod_path = cls.__module__.split(".")
 
             for mod in log.imports:
+                if not mod or mod in self.known_classes or mod in self.known_modules:
+                    continue
+
                 tmp = mod.split(".")
                 imp_class_name = tmp.pop(-1)
                 imp_package_name = ".".join(tmp)
 
                 try:
                     if imp_package_name:
+                        base_package = tmp[0]
                         __import__(imp_package_name)
 
                         if imp_class_name != "*":
@@ -234,12 +246,13 @@ digraph name {
                             imp_module = sys.modules[imp_package_name]
                             mod = imp_module.__name__
                     else:
+                        base_package = mod
                         __import__(mod)
                         imp_module = sys.modules[mod]
 
                     # display only imports from same base package
-                    if mod not in self.known_classes and mod not in self.known_modules:
-                        content += self.write_class(imp_module, with_properties)
+                    if not kwargs.get("package_boundaries", False) or base_package in classname:
+                        content += self.write_class(imp_module, **kwargs)
                         content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
                 except ImportError:
                         pass

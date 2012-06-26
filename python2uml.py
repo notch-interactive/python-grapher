@@ -15,6 +15,7 @@ import argparse
 from python_grapher import Grapher
 
 parser = argparse.ArgumentParser()
+parser.add_argument("-b", "--package-boundaries", action="store_true", help="Draw only classes and modules of the same package as specified classes")
 parser.add_argument("-cb", "--color-background", default="white", help="Color of graph background")
 parser.add_argument("-cc", "--color-class", default="olivedrab4", help="Color of classname background")
 parser.add_argument("-cp", "--color-properties", default="palegoldenrod", help="Color of property background")
@@ -27,8 +28,6 @@ parser.add_argument("classes")
 args = parser.parse_args()
 
 graph = Grapher(args.font_size, args.color_background, args.color_properties, args.color_class)
-import pudb; pudb.set_trace()
-
-graph.draw_classes(args.classes.split(","), args.with_properties)
+graph.draw_classes(args.classes.split(","), with_properties=args.with_properties, package_boundaries=args.package_boundaries)
 graph.write_to_file(args.output_file, args.layout_manager, args.debug)
 print "Generated " + args.output_file
