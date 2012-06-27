@@ -16,7 +16,7 @@ class Generator(object):
         self.color_background = color_background
         self.color_properties = color_properties
         self.color_class = color_class
-
+        self.import_depth = 0
 
     def write_node_start(self, node_name):
         """
@@ -123,42 +123,45 @@ digraph name {
             content += self.write_node_end()
 
             # Imports
-            mod_path = modulename.split(".")
+            if self.import_depth < kwargs.get("depth", 1):
+                self.import_depth += 1
 
-            for mod in log.imports:
-                if not mod or mod in self.known_modules or mod in self.known_classes:
-                    continue
+                for mod in log.imports:
+                    tmp = mod.split(".")
+                    imp_class_name = tmp.pop(-1)
+                    imp_package_name = ".".join(tmp)
 
-                tmp = mod.split(".")
-                imp_class_name = tmp.pop(-1)
-                imp_package_name = ".".join(tmp)
+                    try:
+                        if imp_package_name:
+                            base_package = tmp[0]
+                            __import__(imp_package_name)
 
-                try:
-                    if imp_package_name:
-                        base_package = tmp[0]
-                        __import__(imp_package_name)
+                            if imp_class_name != "*":
+                                imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
 
-                        if imp_class_name != "*":
-                            imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
-
-                            if inspect.isfunction(imp_module):
+                                if inspect.isfunction(imp_module):
+                                    imp_module = sys.modules[imp_package_name]
+                                    mod = imp_module.__name__
+                            else:
                                 imp_module = sys.modules[imp_package_name]
                                 mod = imp_module.__name__
+
                         else:
-                            imp_module = sys.modules[imp_package_name]
-                            mod = imp_module.__name__
+                            base_package = imp_class_name
+                            __import__(imp_class_name)
+                            imp_module = sys.modules[imp_class_name]
 
-                    else:
-                        base_package = imp_class_name
-                        __import__(imp_class_name)
-                        imp_module = sys.modules[imp_class_name]
+                        # already drawn?
+                        if not mod or mod in self.known_modules or mod in self.known_classes:
+                            continue
 
-                    # display only imports from same base package
-                    if not kwargs.get("package_boundaries", False) or base_package in modulename:
-                        content += self.write_class(imp_module, **kwargs)
-                        content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
-                except ImportError:
-                    pass
+                        # display only imports from same base package
+                        if not kwargs.get("package_boundaries", False) or base_package in modulename:
+                            content += self.write_class(imp_module, **kwargs)
+                            content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
+                            self.known_modules.append(mod)
+                    except ImportError:
+                        pass
         else:
             content += self.write_node_end()
 
@@ -192,6 +195,10 @@ digraph name {
                 content += self.write_class(base_class, **kwargs)
 
 
+        # Reset depth counter otherwise only imports from base classes are drawn
+        if self.import_depth == kwargs.get("depth", 1):
+            self.import_depth -= 1
+
         # Draw class
         self.known_classes.append(classname)
         content += self.write_node_start(classname)
@@ -221,41 +228,44 @@ digraph name {
 
 
             # Imports
-            mod_path = cls.__module__.split(".")
+            if self.import_depth < kwargs.get("depth", 1):
+                self.import_depth += 1
 
-            for mod in log.imports:
-                if not mod or mod in self.known_classes or mod in self.known_modules:
-                    continue
+                for mod in log.imports:
+                    tmp = mod.split(".")
+                    imp_class_name = tmp.pop(-1)
+                    imp_package_name = ".".join(tmp)
 
-                tmp = mod.split(".")
-                imp_class_name = tmp.pop(-1)
-                imp_package_name = ".".join(tmp)
+                    try:
+                        if imp_package_name:
+                            base_package = tmp[0]
+                            __import__(imp_package_name)
 
-                try:
-                    if imp_package_name:
-                        base_package = tmp[0]
-                        __import__(imp_package_name)
+                            if imp_class_name != "*":
+                                imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
 
-                        if imp_class_name != "*":
-                            imp_module = getattr(sys.modules[imp_package_name], imp_class_name)
-
-                            if inspect.isfunction(imp_module):
+                                if inspect.isfunction(imp_module):
+                                    imp_module = sys.modules[imp_package_name]
+                                    mod = imp_module.__name__
+                            else:
                                 imp_module = sys.modules[imp_package_name]
                                 mod = imp_module.__name__
                         else:
-                            imp_module = sys.modules[imp_package_name]
-                            mod = imp_module.__name__
-                    else:
-                        base_package = mod
-                        __import__(mod)
-                        imp_module = sys.modules[mod]
+                            base_package = mod
+                            __import__(mod)
+                            imp_module = sys.modules[mod]
 
-                    # display only imports from same base package
-                    if not kwargs.get("package_boundaries", False) or base_package in classname:
-                        content += self.write_class(imp_module, **kwargs)
-                        content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
-                except ImportError:
-                        pass
+                        # already drawn?
+                        if not mod or mod in self.known_classes or mod in self.known_modules:
+                            continue
+
+                        # display only imports from same base package
+                        if not kwargs.get("package_boundaries", False) or base_package in classname:
+                            content += self.write_class(imp_module, **kwargs)
+                            content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
+                            self.known_modules.append(mod)
+                    except ImportError:
+                            pass
         else:
             content += self.write_node_end()
 
