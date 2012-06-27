@@ -29,8 +29,6 @@ parser.add_argument("classes")
 args = parser.parse_args()
 
 graph = Grapher(args.font_size, args.color_background, args.color_properties, args.color_class)
-import pudb; pudb.set_trace()
-
 graph.draw_classes(args.classes.split(","),
                    with_properties=args.with_properties,
                    package_boundaries=args.package_boundaries,
