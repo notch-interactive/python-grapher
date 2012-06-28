@@ -8,6 +8,16 @@ class SourceWalker(ast.NodeVisitor):
     def __init__(self):
         self.imports = []
         self.functions = []
+        self.classes = []
+
+
+    def visit_ClassDef(self, statement):
+        """
+        Collect class definitions
+        """
+        self.classes.append(statement.name)
+        self.generic_visit(statement)
+
 
     def visit_FunctionDef(self, statement):
         """

@@ -158,6 +158,25 @@ digraph name {
 
                         # display only imports from same base package
                         if not kwargs.get("package_boundaries", False) or base_package in modulename:
+                            # check if we can find a class inside the module
+                            if hasattr(imp_module, "__file__"):
+                                module_file = imp_module.__file__.replace(".pyc", ".py")
+                            else:
+                                module_file = ""
+
+                            if module_file.endswith(".py"):
+                                nodes = ast.parse(open(module_file).read())
+                                log = SourceWalker()
+                                log.visit(nodes)
+
+                                if len(log.classes) > 0:
+                                    try:
+                                        for mod_class in log.classes:
+                                            content += self.write_class(getattr(imp_module, mod_class), **kwargs)
+                                        continue
+                                    except AttributeError:
+                                        pass
+
                             content += self.write_class(imp_module, **kwargs)
                             self.drawn_objects.append(mod)
 
@@ -265,6 +284,25 @@ digraph name {
 
                         # display only imports from same base package
                         if not kwargs.get("package_boundaries", False) or base_package in classname:
+                            # check if we can find a class inside the module
+                            if hasattr(imp_module, "__file__"):
+                                module_file = imp_module.__file__.replace(".pyc", ".py")
+                            else:
+                                module_file = ""
+
+                            if module_file.endswith(".py"):
+                                nodes = ast.parse(open(module_file).read())
+                                log = SourceWalker()
+                                log.visit(nodes)
+
+                                if len(log.classes) > 0:
+                                    try:
+                                        for mod_class in log.classes:
+                                            content += self.write_class(getattr(imp_module, mod_class), **kwargs)
+                                        continue
+                                    except AttributeError:
+                                        pass
+
                             content += self.write_class(imp_module, **kwargs)
                             self.drawn_objects.append(mod)
 
