@@ -10,13 +10,14 @@ class Generator(object):
     Some of the code is borrowed from django_extensions
     """
     def __init__(self, font_size=9, color_background="white", color_properties="", color_class=""):
-        self.known_classes = []
-        self.known_modules = []
+        self.drawn_objects = []
+        self.drawn_edges = {}
         self.font_size = font_size
         self.color_background = color_background
         self.color_properties = color_properties
         self.color_class = color_class
         self.import_depth = 0
+
 
     def write_node_start(self, node_name):
         """
@@ -98,11 +99,11 @@ digraph name {
         content = ""
 
         # Module already drawn?
-        if modulename in self.known_modules:
+        if modulename in self.drawn_objects:
             return content
 
         # Draw class
-        self.known_modules.append(modulename)
+        self.drawn_objects.append(modulename)
         content += self.write_node_start(modulename)
 
         # Parse source file
@@ -152,14 +153,17 @@ digraph name {
                             imp_module = sys.modules[imp_class_name]
 
                         # already drawn?
-                        if not mod or mod in self.known_modules or mod in self.known_classes:
+                        if not mod or mod in self.drawn_objects:
                             continue
 
                         # display only imports from same base package
                         if not kwargs.get("package_boundaries", False) or base_package in modulename:
                             content += self.write_class(imp_module, **kwargs)
-                            content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
-                            self.known_modules.append(mod)
+                            self.drawn_objects.append(mod)
+
+                            if mod not in self.drawn_edges.get(modulename, []):
+                                content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (modulename, mod)
+                                self.drawn_edges.setdefault(modulename, []).append(mod)
                     except ImportError:
                         pass
         else:
@@ -184,7 +188,7 @@ digraph name {
         classname = self.get_full_classname(cls)
 
         # Class already drawn?
-        if classname in self.known_classes:
+        if classname in self.drawn_objects:
             return content
 
         # First draw base classes
@@ -200,7 +204,7 @@ digraph name {
             self.import_depth -= 1
 
         # Draw class
-        self.known_classes.append(classname)
+        self.drawn_objects.append(classname)
         content += self.write_node_start(classname)
 
         # Parse source file
@@ -223,9 +227,9 @@ digraph name {
 
             # Draw edges between parent and child classes
             for base_class in cls.__bases__:
-                if base_class != object:
+                if base_class != object and self.get_full_classname(base_class) not in self.drawn_edges.get(classname, []):
                     content += "\"%s\" -> \"%s\" [style=dotted arrowhead=normal arrowtail=normal];\n" % (classname, self.get_full_classname(base_class))
-
+                    self.drawn_edges.setdefault(classname, []).append(self.get_full_classname(base_class))
 
             # Imports
             if self.import_depth < kwargs.get("depth", 1):
@@ -256,14 +260,17 @@ digraph name {
                             imp_module = sys.modules[mod]
 
                         # already drawn?
-                        if not mod or mod in self.known_classes or mod in self.known_modules:
+                        if not mod or mod in self.drawn_objects:
                             continue
 
                         # display only imports from same base package
                         if not kwargs.get("package_boundaries", False) or base_package in classname:
                             content += self.write_class(imp_module, **kwargs)
-                            content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
-                            self.known_modules.append(mod)
+                            self.drawn_objects.append(mod)
+
+                            if mod not in self.drawn_edges.get(classname, []):
+                                content += "\"%s\" -> \"%s\" [style=solid arrowhead=normal arrowtail=normal label=\"Uses\"];\n" % (classname, mod)
+                                self.drawn_edges.setdefault(classname, []).append(mod)
                     except ImportError:
                             pass
         else:
