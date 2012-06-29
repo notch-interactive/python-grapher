@@ -17,7 +17,7 @@ class build_py(_build_py):
     setup(name="python_grapher",
           version="0.1.0",
           author="Notch Interactive GmbH",
-          author_email="info@notch-interactive.com",
+          author_email="office@notch-interactive.com",
           url="http://github.com/notch-interactive/python-grapher",
           description="Draw diagrams from your Python classes and modules",
           packages=["python_grapher"],
