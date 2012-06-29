@@ -13,7 +13,7 @@ Requirements
 Usage
 -----
 
-.. code-block:: Python
+.. code-block:: python
 
   from python_grapher import Grapher
   graph = Grapher()
